@@ -1,0 +1,38 @@
+# Python and development tools
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Local data, model weights and experiment artifacts
+/data/
+/datasets/
+/dataset-augment/
+/Model/
+/outputs/
+/runs/
+/checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.xlsx
+*.xls
+*.pdf
+events.out.tfevents.*
+
+# Local configuration and editor files
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
