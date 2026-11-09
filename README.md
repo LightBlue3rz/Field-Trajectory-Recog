@@ -265,13 +265,30 @@ Results are written to `analysis.json`, including operation probabilities, point
 
 ## Tests and quick checks
 
-Synthetic raw CSV fixtures are included; no private dataset or pretrained weights are required:
+The test suite includes small synthetic CSV fixtures and four de-identified recorded trajectories. No private dataset or pretrained weights are required:
 
 ```bash
 python -B -m unittest discover -s tests -p "test_*.py" -v
+```
+
+To run only the recorded-data tests:
+
+```bash
+python -B -m unittest discover -s tests -p "test_recorded_samples.py" -v
+```
+
+The four complete trajectories are stored in `tests/fixtures/recorded`, with two shuttle and two skip-row examples. They retain recorded speed, heading, relative timestamps and turn/straight labels. Coordinates are relocated near the origin, and original device identifiers and calendar dates are omitted. See [the sample description](tests/fixtures/recorded/README.md) for the transformations and expected preprocessing counts.
+
+Recorded-data tests check preprocessing, both default models' forward passes and losses, operation labels in point reports, one optimizer step, and annotated travel distances. Networks are initialized in memory, and the tests do not read or write model checkpoints. These are functional checks; recognition accuracy requires trained weights and held-out evaluation data.
+
+Optional training quick checks use the three-class synthetic fixtures below and create new checkpoints under the sibling `Model/` directory:
+
+```bash
 python -B -m agri train --data-root tests/fixtures/data --epochs 1 --output ../Model/smoke_pattern
 python -B train.py --data-root tests/fixtures/data --epochs 1 --output ../Model/smoke_point
 ```
+
+The four recorded examples have only two files per class, so use the synthetic fixtures or a larger dataset for training with three nonempty partitions.
 
 Optional style checks:
 
@@ -299,7 +316,7 @@ eval.py        Point evaluation entry point
 predict.py     Point prediction entry point
 pipeline.py    Hierarchical recognition and travel statistics
 efficiency.py  Geographic distances and working travel ratio accounting
-tests/         Portable tests and static synthetic CSV fixtures
+tests/         Portable tests, synthetic fixtures and de-identified recorded CSVs
 ```
 
-Model weights, datasets, experiment reports, caches and local configuration are excluded by `.gitignore`. Keep run directories under the sibling `Model/` directory.
+Full datasets, model weights, experiment reports, caches and local configuration are excluded by `.gitignore`. The bundled test fixtures are tracked. Keep run directories under the sibling `Model/` directory.
