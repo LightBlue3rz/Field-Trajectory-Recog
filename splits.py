@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import math
 import random
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +13,7 @@ import numpy as np
 from trajectory import TABLE_SUFFIXES
 
 CLASS_NAMES = ("shuttle", "skip_row", "circuit")
+SPLIT_ROUNDING = "ceil_validation_test"
 CLASS_DIRECTORIES = {name: index for index, name in enumerate(CLASS_NAMES)}
 CLASS_DIRECTORIES.update({"梭行法": 0, "套行法": 1, "绕行法": 2})
 
@@ -38,16 +41,19 @@ def _class_files(root: Path):
 
 
 def _allocate(size, fractions):
+    """Ceil validation/test counts per class and assign the remainder to training."""
     if size < 3:
         raise ValueError("At least three trajectories per present class are needed for train/val/test")
-    desired = np.asarray(fractions) * size
-    counts = np.maximum(np.floor(desired).astype(int), 1)
-    while counts.sum() < size:
-        counts[np.argmax(desired - counts)] += 1
-    while counts.sum() > size:
-        candidates = np.where(counts > 1, counts - desired, -np.inf)
-        counts[np.argmax(candidates)] -= 1
-    return counts.tolist()
+    # Decimal avoids an extra file when an exact product, e.g. 100 * 0.07,
+    # is represented slightly above its integer value by binary floats.
+    validation_count, test_count = (math.ceil(Decimal(str(fraction)) * size) for fraction in fractions[1:])
+    train_count = size - validation_count - test_count
+    if train_count < 1:
+        raise ValueError(
+            "Ceiling validation/test counts leave no training trajectories; "
+            "reduce the fractions or add trajectories"
+        )
+    return [train_count, validation_count, test_count]
 
 
 def discover_splits(

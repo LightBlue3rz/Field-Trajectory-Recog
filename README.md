@@ -104,9 +104,19 @@ Default profiles use class-stratified file partitions:
 | Operation patterns | 70% | 20% | 10% |
 | Turn/straight points | 70% | 20% | 10% |
 
-The default `--split-policy stratified` pools eligible files across the input directories and creates new partitions. It does not move or modify input files. Small datasets use integer allocations with at least one file per present class per partition; at least three files per class are required. The default seed is 42.
+The default `--split-policy stratified` pools eligible files across the input directories and creates new partitions. It does not move or modify input files. Counts are computed separately for each class of `N` trajectories:
+
+```text
+validation_count = ceil(N * validation_fraction)
+test_count = ceil(N * test_fraction)
+train_count = N - validation_count - test_count
+```
+
+At the default fractions, `N=143` gives **99/29/15** train/validation/test files and `N=297` gives **207/60/30**. Decimal fractions are evaluated without binary floating-point rounding artifacts. At least three files per class and one remaining training file are required; incompatible fractions raise an error. The default seed is 42.
 
 Use `--split-policy provided` to preserve existing, nonempty Train/Val/Test partitions. Use `--validation-fraction` and `--test-fraction` to choose other stratified proportions.
+
+Every training run writes its actual relative file lists, seed, split policy, fractions, total counts and per-class counts to `splits.json`; `config.json` records the training parameters. New stratified runs record `rounding: "ceil_validation_test"`. Runs using existing partitions or `--split-manifest` preserve their file membership and record no new rounding rule. Use the saved manifest to reproduce an existing run exactly, including runs created before the ceiling allocation rule was introduced.
 
 All windows and segments from a file remain in one partition. Local training uses only shuttle and skip-row trajectories. Pattern training expects all three operation classes; `--allow-missing-classes` permits partial-class pipeline checks.
 

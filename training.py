@@ -25,7 +25,7 @@ from evaluation import (
 )
 from evaluation import classification_metrics as classification_metrics
 from model import PointModelConfig, TransformerNodeClassifier
-from splits import CLASS_DIRECTORIES, CLASS_NAMES, FileRecord, discover_splits
+from splits import CLASS_DIRECTORIES, CLASS_NAMES, SPLIT_ROUNDING, FileRecord, discover_splits
 from trajectory import (
     FEATURE_NAMES,
     TABLE_SUFFIXES,
@@ -311,6 +311,7 @@ def train_experiment(args, task="pattern"):
         "task": task,
         "seed": args.seed,
         "policy": "manifest" if args.split_manifest else args.split_policy,
+        "rounding": SPLIT_ROUNDING if not args.split_manifest and args.split_policy == "stratified" else None,
         "fractions": [
             1 - args.validation_fraction - args.test_fraction,
             args.validation_fraction,
@@ -319,6 +320,10 @@ def train_experiment(args, task="pattern"):
         if not args.split_manifest and args.split_policy == "stratified"
         else None,
         "counts": {split: len(records) for split, records in splits.items()},
+        "class_counts": {
+            split: {CLASS_NAMES[label]: sum(record.label == label for record in records) for label in classes}
+            for split, records in splits.items()
+        },
         "splits": {
             split: [{"path": relative_path(record.path, root), "label": record.label} for record in records]
             for split, records in splits.items()

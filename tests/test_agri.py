@@ -110,6 +110,37 @@ class SplitTests(unittest.TestCase):
         self.assertEqual(_allocate(100, (0.7, 0.2, 0.1)), [70, 20, 10])
         self.assertEqual(_allocate(100, (0.7, 0.15, 0.15)), [70, 15, 15])
 
+    def test_validation_and_test_counts_are_ceiled_per_class(self):
+        for size, expected in (
+            (143, [99, 29, 15]),
+            (157, [109, 32, 16]),
+            (297, [207, 60, 30]),
+        ):
+            with self.subTest(size=size):
+                counts = _allocate(size, (0.7, 0.2, 0.1))
+                self.assertEqual(counts, expected)
+                self.assertEqual(sum(counts), size)
+
+    def test_exact_decimal_products_do_not_round_to_an_extra_file(self):
+        self.assertEqual(_allocate(100, (0.83, 0.07, 0.1)), [83, 7, 10])
+
+    def test_ceiling_that_leaves_no_training_files_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "no training"):
+            _allocate(3, (0.2, 0.4, 0.4))
+
+    def test_discovery_applies_ceiling_independently_to_each_class(self):
+        records = [
+            FileRecord((FIXTURES / f"class{label}_{index}.csv").resolve(), label)
+            for label, size in enumerate((143, 157, 297))
+            for index in range(size)
+        ]
+        with patch("splits._class_files", side_effect=[records, []]):
+            splits = discover_splits(FIXTURES)
+        for label, expected in enumerate(([99, 29, 15], [109, 32, 16], [207, 60, 30])):
+            self.assertEqual(
+                [sum(record.label == label for record in group) for group in splits.values()], expected
+            )
+
     def test_default_splits_allocate_seven_two_one_for_each_class(self):
         records = [
             FileRecord((FIXTURES / f"class{label}_{index}.csv").resolve(), label)
